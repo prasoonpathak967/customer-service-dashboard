@@ -1,62 +1,55 @@
-# Customer Service Dashboard
+# Customer Service Dashboard - Day 2
 
-A simple Day-1 frontend task built with React and Vite.
+A simple React + Vite frontend prototype using mock data only.
 
-## Features
+## Day-2 features
 
-- Login screen with basic validation
-- Dashboard with sidebar and header
-- Four summary cards
-- Recent service requests table
-- Customer list
-- Search customers
-- Filter customers by status
-- Add customer
-- View customer details in a modal
-- Mock data only
-- No backend or API required
+- Login validation for email and required password
+- Dashboard summary cards with Today / This Week / This Month data
+- Dashboard service request search, status filter and sorting
+- Empty state for no service request results
+- Customer search by name, email or phone
+- Customer status filter
+- Add Customer modal with validation
+- Customer details modal
+- Successful customer creation message
+- Loading state when dashboard period changes
+- Reusable components for cards, status badges, sidebar, header and modals
+- Responsive sidebar and horizontally scrollable tables
+- Logout action
+- No backend or API
 
-## How to run
+## Run locally
 
-### 1. Open the project
-
-Open this folder in VS Code.
-
-### 2. Install dependencies
-
-Open the VS Code terminal and run:
+1. Open this folder in VS Code.
+2. Open the terminal.
+3. Run:
 
 ```bash
 npm install
-```
-
-### 3. Start the project
-
-```bash
 npm run dev
 ```
 
-Then open the local URL shown by Vite, normally:
-
-http://localhost:5173
+4. Open the URL shown by Vite, normally `http://localhost:5173`.
 
 ## Login
 
-There is no backend login.
+There is no real authentication.
 
-Use any valid email and a password with at least 6 characters.
+Use any valid email, for example:
 
-Example:
+`admin@example.com`
 
-Email: admin@example.com
-Password: 123456
+and any non-empty password.
 
-## Project structure
+## Folder structure
 
+```text
 src/
-- components are kept inside the main file for this small Day-1 version
-- data/mockData.js contains the mock customers and service requests
-- main.jsx contains the application screens and logic
-- styles.css contains the UI styling
+  data/
+    mockData.js
+  main.jsx
+  styles.css
+```
 
-This version intentionally keeps the code simple because the Day-1 requirement focuses on the basic structure and major screens.
+Mock data is kept separately from the UI code.

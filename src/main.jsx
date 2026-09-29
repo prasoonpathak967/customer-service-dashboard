@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import { customers, serviceRequests } from "./data/mockData";
+import { customers, serviceRequests, dashboardStats } from "./data/mockData";
 
 function App() {
   const [page, setPage] = useState("dashboard");
   const [loggedIn, setLoggedIn] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   if (!loggedIn) {
     return <Login onLogin={() => setLoggedIn(true)} />;
@@ -13,9 +14,14 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar page={page} setPage={setPage} onLogout={() => setLoggedIn(false)} />
+      <Sidebar
+        page={page}
+        setPage={setPage}
+        onLogout={() => setLoggedIn(false)}
+        open={sidebarOpen}
+      />
       <div className="main-area">
-        <Header page={page} />
+        <Header page={page} onMenu={() => setSidebarOpen(!sidebarOpen)} />
         {page === "dashboard" ? <Dashboard /> : <Customers />}
       </div>
     </div>
@@ -29,19 +35,14 @@ function Login({ onLogin }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!email || !password) {
-      setError("Please enter email and password.");
+      setError("Email and password are required.");
       return;
     }
-
-    if (!email.includes("@")) {
-      setError("Please enter a valid email.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (!emailPattern.test(email)) {
+      setError("Please enter a valid email address.");
       return;
     }
 
@@ -79,38 +80,38 @@ function Login({ onLogin }) {
   );
 }
 
-function Sidebar({ page, setPage, onLogout }) {
+function Sidebar({ page, setPage, onLogout, open }) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${open ? "" : "collapsed"}`}>
       <div className="brand">ServiceDesk</div>
-
       <nav>
         <button
           className={page === "dashboard" ? "nav-item active" : "nav-item"}
           onClick={() => setPage("dashboard")}
         >
-          <span>⌂</span> Dashboard
+          <span>⌂</span> <em>Dashboard</em>
         </button>
-
         <button
           className={page === "customers" ? "nav-item active" : "nav-item"}
           onClick={() => setPage("customers")}
         >
-          <span>♙</span> Customers
+          <span>♙</span> <em>Customers</em>
         </button>
       </nav>
-
-      <button className="logout" onClick={onLogout}>Logout</button>
+      <button className="logout" onClick={onLogout}>↪ <em>Logout</em></button>
     </aside>
   );
 }
 
-function Header({ page }) {
+function Header({ page, onMenu }) {
   return (
     <header className="header">
-      <div>
-        <h2>{page === "dashboard" ? "Dashboard" : "Customers"}</h2>
-        <p>Welcome back</p>
+      <div className="header-left">
+        <button className="menu-btn" onClick={onMenu}>☰</button>
+        <div>
+          <h2>{page === "dashboard" ? "Dashboard" : "Customers"}</h2>
+          <p>Welcome back</p>
+        </div>
       </div>
       <div className="user-box">
         <div className="avatar">A</div>
@@ -121,21 +122,83 @@ function Header({ page }) {
 }
 
 function Dashboard() {
+  const [period, setPeriod] = useState("Today");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("All");
+  const [sort, setSort] = useState("newest");
+  const [loading, setLoading] = useState(false);
+
+  const stats = dashboardStats[period];
+
+  const requests = useMemo(() => {
+    let result = serviceRequests.filter((item) => {
+      const text = `${item.customer} ${item.service}`.toLowerCase();
+      return text.includes(search.toLowerCase()) &&
+        (status === "All" || item.status === status);
+    });
+
+    result.sort((a, b) =>
+      sort === "customer"
+        ? a.customer.localeCompare(b.customer)
+        : b.id - a.id
+    );
+    return result;
+  }, [search, status, sort]);
+
+  const changePeriod = (value) => {
+    setLoading(true);
+    setPeriod(value);
+    setTimeout(() => setLoading(false), 300);
+  };
+
   return (
     <main className="content">
-      <div className="cards">
-        <SummaryCard title="Total Customers" value="120" />
-        <SummaryCard title="Active Services" value="85" />
-        <SummaryCard title="Pending Requests" value="12" />
-        <SummaryCard title="Revenue" value="₹45,000" />
+      <div className="page-toolbar">
+        <div>
+          <h3>Overview</h3>
+          <p className="muted-small">Track service activity and customer requests.</p>
+        </div>
+        <select value={period} onChange={(e) => changePeriod(e.target.value)}>
+          <option>Today</option>
+          <option>This Week</option>
+          <option>This Month</option>
+        </select>
       </div>
+
+      {loading ? (
+        <div className="loading">Loading dashboard...</div>
+      ) : (
+        <div className="cards">
+          {stats.map((stat) => (
+            <SummaryCard key={stat.title} title={stat.title} value={stat.value} />
+          ))}
+        </div>
+      )}
 
       <section className="panel">
         <div className="panel-heading">
           <div>
             <h3>Recent Service Requests</h3>
-            <p>Latest customer service requests</p>
+            <p>Search, filter and sort recent requests</p>
           </div>
+        </div>
+
+        <div className="filters">
+          <input
+            className="search"
+            placeholder="Search customer or service..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option>All</option>
+            <option>Pending</option>
+            <option>Completed</option>
+          </select>
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="newest">Newest</option>
+            <option value="customer">Customer A-Z</option>
+          </select>
         </div>
 
         <div className="table-wrap">
@@ -149,7 +212,7 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {serviceRequests.map((request) => (
+              {requests.map((request) => (
                 <tr key={request.id}>
                   <td>{request.customer}</td>
                   <td>{request.service}</td>
@@ -159,6 +222,12 @@ function Dashboard() {
               ))}
             </tbody>
           </table>
+          {requests.length === 0 && (
+            <div className="empty">
+              <strong>No service requests found</strong>
+              <span>Try changing the search or status filter.</span>
+            </div>
+          )}
         </div>
       </section>
     </main>
@@ -184,20 +253,23 @@ function Customers() {
   const [status, setStatus] = useState("All");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [success, setSuccess] = useState("");
 
   const filteredCustomers = customerList.filter((customer) => {
+    const searchText = search.toLowerCase();
     const matchesSearch =
-      customer.name.toLowerCase().includes(search.toLowerCase()) ||
-      customer.email.toLowerCase().includes(search.toLowerCase());
-
+      customer.name.toLowerCase().includes(searchText) ||
+      customer.email.toLowerCase().includes(searchText) ||
+      customer.phone.includes(searchText);
     const matchesStatus = status === "All" || customer.status === status;
-
     return matchesSearch && matchesStatus;
   });
 
   const addCustomer = (newCustomer) => {
-    setCustomerList([...customerList, { ...newCustomer, id: Date.now() }]);
+    setCustomerList((list) => [...list, { ...newCustomer, id: Date.now() }]);
     setShowAdd(false);
+    setSuccess("Customer added successfully.");
+    setTimeout(() => setSuccess(""), 2500);
   };
 
   return (
@@ -206,27 +278,27 @@ function Customers() {
         <div className="customer-toolbar">
           <div>
             <h3>Customer List</h3>
-            <p>Manage your customers</p>
+            <p>Search and manage your customers</p>
           </div>
-
           <button className="primary-btn" onClick={() => setShowAdd(true)}>
             + Add Customer
           </button>
         </div>
 
+        {success && <div className="success">{success}</div>}
+
         <div className="filters">
           <input
             className="search"
             type="text"
-            placeholder="Search by name or email..."
+            placeholder="Search by name, email or phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
+            <option>All</option>
+            <option>Active</option>
+            <option>Inactive</option>
           </select>
         </div>
 
@@ -259,7 +331,10 @@ function Customers() {
           </table>
 
           {filteredCustomers.length === 0 && (
-            <p className="empty">No customers found.</p>
+            <div className="empty">
+              <strong>No customers found</strong>
+              <span>Try another search or status.</span>
+            </div>
           )}
         </div>
       </section>
@@ -272,10 +347,7 @@ function Customers() {
       )}
 
       {showAdd && (
-        <AddCustomerModal
-          onClose={() => setShowAdd(false)}
-          onAdd={addCustomer}
-        />
+        <AddCustomerModal onClose={() => setShowAdd(false)} onAdd={addCustomer} />
       )}
     </main>
   );
@@ -289,14 +361,12 @@ function CustomerModal({ customer, onClose }) {
           <h3>Customer Details</h3>
           <button className="close" onClick={onClose}>×</button>
         </div>
-
         <div className="details">
           <p><strong>Name:</strong> {customer.name}</p>
           <p><strong>Email:</strong> {customer.email}</p>
           <p><strong>Phone:</strong> {customer.phone}</p>
           <p><strong>Status:</strong> <StatusBadge status={customer.status} /></p>
         </div>
-
         <button className="primary-btn" onClick={onClose}>Close</button>
       </div>
     </div>
@@ -305,23 +375,29 @@ function CustomerModal({ customer, onClose }) {
 
 function AddCustomerModal({ onClose, onAdd }) {
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    status: "Active"
+    name: "", email: "", phone: "", status: "Active"
   });
   const [error, setError] = useState("");
 
+  const updateField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    setError("");
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!form.name || !form.email || !form.phone) {
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
       setError("Please fill all fields.");
       return;
     }
-
-    if (!form.email.includes("@")) {
-      setError("Please enter a valid email.");
+    if (!emailPattern.test(form.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!/^\d{10}$/.test(form.phone)) {
+      setError("Phone number should contain 10 digits.");
       return;
     }
 
@@ -339,28 +415,28 @@ function AddCustomerModal({ onClose, onAdd }) {
         <label>Name</label>
         <input
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          onChange={(e) => updateField("name", e.target.value)}
           placeholder="Customer name"
         />
 
         <label>Email</label>
         <input
           value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          onChange={(e) => updateField("email", e.target.value)}
           placeholder="customer@email.com"
         />
 
         <label>Phone</label>
         <input
           value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          placeholder="Phone number"
+          onChange={(e) => updateField("phone", e.target.value)}
+          placeholder="10 digit phone number"
         />
 
         <label>Status</label>
         <select
           value={form.status}
-          onChange={(e) => setForm({ ...form, status: e.target.value })}
+          onChange={(e) => updateField("status", e.target.value)}
         >
           <option>Active</option>
           <option>Inactive</option>
