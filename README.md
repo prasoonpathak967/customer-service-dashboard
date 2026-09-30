@@ -1,6 +1,6 @@
-# ServiceDesk Customer Dashboard
+# Customer Service Dashboard
 
-A frontend customer service dashboard built with React and Vite. The project was developed in three stages, starting with the basic dashboard structure and then adding interactions, customer management, validation, responsive behavior, UI refinement, and testing.
+A frontend customer service dashboard The project was developed in three stages, starting with the basic dashboard structure and then adding interactions, customer management, validation, responsive behavior, UI refinement, and testing.
 
 The application uses mock data only. There is no backend, API, database, or real authentication.
 
@@ -402,10 +402,15 @@ Possible next steps:
 - Activity history
 - Dashboard charts and reports
 
+## Live link
+
+https://customer-service-dashboard-brown.vercel.app/
+
 ## GitHub
 
 Repository:
 
 https://github.com/prasoonpathak967/customer-service-dashboard
+
 
 
