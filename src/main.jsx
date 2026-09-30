@@ -1,27 +1,43 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { customers, serviceRequests, dashboardStats } from "./data/mockData";
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function App() {
   const [page, setPage] = useState("dashboard");
   const [loggedIn, setLoggedIn] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  if (!loggedIn) {
-    return <Login onLogin={() => setLoggedIn(true)} />;
-  }
+  const navigate = (nextPage) => {
+    setPage(nextPage);
+    setSidebarOpen(false);
+  };
+
+  const logout = () => {
+    setLoggedIn(false);
+    setPage("dashboard");
+    setSidebarOpen(true);
+  };
+
+  if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
 
   return (
     <div className="app">
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? "" : "hidden"}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
       <Sidebar
         page={page}
-        setPage={setPage}
-        onLogout={() => setLoggedIn(false)}
+        setPage={navigate}
+        onLogout={logout}
         open={sidebarOpen}
       />
       <div className="main-area">
-        <Header page={page} onMenu={() => setSidebarOpen(!sidebarOpen)} />
+        <Header page={page} onMenu={() => setSidebarOpen((open) => !open)} />
         {page === "dashboard" ? <Dashboard /> : <Customers />}
       </div>
     </div>
@@ -33,15 +49,15 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const handleSubmit = (event) => {
+    event.preventDefault();
 
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       setError("Email and password are required.");
       return;
     }
-    if (!emailPattern.test(email)) {
+
+    if (!emailPattern.test(email.trim())) {
       setError("Please enter a valid email address.");
       return;
     }
@@ -52,29 +68,62 @@ function Login({ onLogin }) {
 
   return (
     <div className="login-page">
-      <form className="login-box" onSubmit={handleSubmit}>
-        <h1>ServiceDesk</h1>
-        <p className="muted">Sign in to continue</p>
+      <div className="login-decoration" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
 
-        <label>Email</label>
+      <form className="login-box" onSubmit={handleSubmit} noValidate>
+        <div className="login-brand">
+          <div className="brand-mark">SD</div>
+          <div>
+            <strong>ServiceDesk</strong>
+            <span>Customer operations</span>
+          </div>
+        </div>
+
+        <div className="login-heading">
+          <p className="eyebrow">WELCOME BACK</p>
+          <h1>Sign in to your workspace</h1>
+          <p className="muted">Manage customers, requests, and service activity from one place.</p>
+        </div>
+
+        <label htmlFor="login-email">Email address</label>
         <input
+          id="login-email"
           type="email"
-          placeholder="Enter email"
+          autoComplete="email"
+          placeholder="admin@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setError("");
+          }}
+          aria-invalid={Boolean(error)}
         />
 
-        <label>Password</label>
+        <label htmlFor="login-password">Password</label>
         <input
+          id="login-password"
           type="password"
-          placeholder="Enter password"
+          autoComplete="current-password"
+          placeholder="Enter your password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setError("");
+          }}
+          aria-invalid={Boolean(error)}
         />
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
-        <button className="primary-btn full" type="submit">Login</button>
+        <button className="primary-btn full" type="submit">
+          Sign in <span aria-hidden="true">→</span>
+        </button>
+
+        <p className="demo-note">Demo mode · Mock authentication only</p>
       </form>
     </div>
   );
@@ -83,22 +132,47 @@ function Login({ onLogin }) {
 function Sidebar({ page, setPage, onLogout, open }) {
   return (
     <aside className={`sidebar ${open ? "" : "collapsed"}`}>
-      <div className="brand">ServiceDesk</div>
-      <nav>
+      <div className="brand">
+        <div className="brand-mark">SD</div>
+        <div className="brand-copy">
+          <strong>ServiceDesk</strong>
+          <span>Customer operations</span>
+        </div>
+      </div>
+
+      <div className="nav-label">WORKSPACE</div>
+      <nav aria-label="Main navigation">
         <button
-          className={page === "dashboard" ? "nav-item active" : "nav-item"}
+          className={`nav-item ${page === "dashboard" ? "active" : ""}`}
           onClick={() => setPage("dashboard")}
+          aria-current={page === "dashboard" ? "page" : undefined}
         >
-          <span>⌂</span> <em>Dashboard</em>
+          <span className="nav-icon" aria-hidden="true">⌂</span>
+          <em>Dashboard</em>
         </button>
         <button
-          className={page === "customers" ? "nav-item active" : "nav-item"}
+          className={`nav-item ${page === "customers" ? "active" : ""}`}
           onClick={() => setPage("customers")}
+          aria-current={page === "customers" ? "page" : undefined}
         >
-          <span>♙</span> <em>Customers</em>
+          <span className="nav-icon" aria-hidden="true">♙</span>
+          <em>Customers</em>
         </button>
       </nav>
-      <button className="logout" onClick={onLogout}>↪ <em>Logout</em></button>
+
+      <div className="sidebar-bottom">
+        <div className="sidebar-help">
+          <span className="help-dot" />
+          <div>
+            <strong>All systems ready</strong>
+            <small>Demo environment</small>
+          </div>
+        </div>
+        <button className="logout" onClick={onLogout}>
+          <span aria-hidden="true">↪</span>
+          <em>Log out</em>
+        </button>
+      </div>
     </aside>
   );
 }
@@ -107,15 +181,23 @@ function Header({ page, onMenu }) {
   return (
     <header className="header">
       <div className="header-left">
-        <button className="menu-btn" onClick={onMenu}>☰</button>
+        <button className="menu-btn" onClick={onMenu} aria-label="Toggle navigation">
+          <span />
+          <span />
+          <span />
+        </button>
         <div>
+          <p className="breadcrumb">WORKSPACE / {page === "dashboard" ? "OVERVIEW" : "CUSTOMERS"}</p>
           <h2>{page === "dashboard" ? "Dashboard" : "Customers"}</h2>
-          <p>Welcome back</p>
         </div>
       </div>
       <div className="user-box">
         <div className="avatar">A</div>
-        <span>Admin</span>
+        <div className="user-copy">
+          <strong>Admin</strong>
+          <span>Administrator</span>
+        </div>
+        <span className="online-dot" aria-label="Online" />
       </div>
     </header>
   );
@@ -128,49 +210,62 @@ function Dashboard() {
   const [sort, setSort] = useState("newest");
   const [loading, setLoading] = useState(false);
 
-  const stats = dashboardStats[period];
+  const stats = dashboardStats[period] || [];
 
   const requests = useMemo(() => {
-    let result = serviceRequests.filter((item) => {
-      const text = `${item.customer} ${item.service}`.toLowerCase();
-      return text.includes(search.toLowerCase()) &&
-        (status === "All" || item.status === status);
-    });
+    const query = search.trim().toLowerCase();
 
-    result.sort((a, b) =>
-      sort === "customer"
-        ? a.customer.localeCompare(b.customer)
-        : b.id - a.id
-    );
-    return result;
+    return serviceRequests
+      .filter((item) => {
+        const text = `${item?.customer || ""} ${item?.service || ""}`.toLowerCase();
+        return text.includes(query) && (status === "All" || item?.status === status);
+      })
+      .sort((a, b) =>
+        sort === "customer"
+          ? (a?.customer || "").localeCompare(b?.customer || "")
+          : (b?.id || 0) - (a?.id || 0)
+      );
   }, [search, status, sort]);
 
   const changePeriod = (value) => {
     setLoading(true);
     setPeriod(value);
-    setTimeout(() => setLoading(false), 300);
+    window.setTimeout(() => setLoading(false), 300);
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setStatus("All");
+    setSort("newest");
   };
 
   return (
     <main className="content">
       <div className="page-toolbar">
         <div>
-          <h3>Overview</h3>
-          <p className="muted-small">Track service activity and customer requests.</p>
+          <p className="eyebrow">OVERVIEW</p>
+          <h3>Good morning, Admin</h3>
+          <p className="muted-small">Here&apos;s what&apos;s happening with your service desk today.</p>
         </div>
-        <select value={period} onChange={(e) => changePeriod(e.target.value)}>
-          <option>Today</option>
-          <option>This Week</option>
-          <option>This Month</option>
-        </select>
+        <label className="period-select">
+          <span>Period</span>
+          <select value={period} onChange={(event) => changePeriod(event.target.value)}>
+            <option>Today</option>
+            <option>This Week</option>
+            <option>This Month</option>
+          </select>
+        </label>
       </div>
 
       {loading ? (
-        <div className="loading">Loading dashboard...</div>
+        <div className="loading" aria-live="polite">
+          <div className="spinner" />
+          Updating overview...
+        </div>
       ) : (
         <div className="cards">
-          {stats.map((stat) => (
-            <SummaryCard key={stat.title} title={stat.title} value={stat.value} />
+          {stats.map((stat, index) => (
+            <SummaryCard key={stat.title} {...stat} index={index} />
           ))}
         </div>
       )}
@@ -178,24 +273,38 @@ function Dashboard() {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <h3>Recent Service Requests</h3>
-            <p>Search, filter and sort recent requests</p>
+            <div className="section-title-row">
+              <h3>Recent service requests</h3>
+              <span className="count-pill">{requests.length}</span>
+            </div>
+            <p>Monitor incoming work and current request status.</p>
           </div>
         </div>
 
         <div className="filters">
-          <input
-            className="search"
-            placeholder="Search customer or service..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <div className="search-wrap">
+            <span className="search-icon" aria-hidden="true">⌕</span>
+            <input
+              className="search"
+              aria-label="Search service requests"
+              placeholder="Search customer or service..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            {search && (
+              <button className="clear-search" onClick={() => setSearch("")} aria-label="Clear search">
+                ×
+              </button>
+            )}
+          </div>
+
+          <select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter by status">
             <option>All</option>
             <option>Pending</option>
             <option>Completed</option>
           </select>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+
+          <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort requests">
             <option value="newest">Newest</option>
             <option value="customer">Customer A-Z</option>
           </select>
@@ -214,19 +323,27 @@ function Dashboard() {
             <tbody>
               {requests.map((request) => (
                 <tr key={request.id}>
-                  <td>{request.customer}</td>
-                  <td>{request.service}</td>
-                  <td><StatusBadge status={request.status} /></td>
-                  <td>{request.date}</td>
+                  <td>
+                    <div className="table-person">
+                      <div className="mini-avatar">{getInitials(request.customer)}</div>
+                      <strong>{request.customer || "Unknown customer"}</strong>
+                    </div>
+                  </td>
+                  <td>{request.service || "Not specified"}</td>
+                  <td><StatusBadge status={request.status || "Pending"} /></td>
+                  <td className="date-cell">{request.date || "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+
           {requests.length === 0 && (
-            <div className="empty">
-              <strong>No service requests found</strong>
-              <span>Try changing the search or status filter.</span>
-            </div>
+            <EmptyState
+              title="No service requests found"
+              message="Try changing the search or status filter."
+              actionLabel="Clear filters"
+              onAction={resetFilters}
+            />
           )}
         </div>
       </section>
@@ -234,17 +351,26 @@ function Dashboard() {
   );
 }
 
-function SummaryCard({ title, value }) {
+function SummaryCard({ title, value, index }) {
+  const icons = ["◉", "✓", "!", "₹"];
   return (
-    <div className="summary-card">
-      <p>{title}</p>
+    <div className={`summary-card card-${index}`}>
+      <div className="summary-top">
+        <span>{title}</span>
+        <div className="card-icon" aria-hidden="true">{icons[index]}</div>
+      </div>
       <h3>{value}</h3>
+      <div className="card-foot">
+        <span className="trend">↗</span>
+        <span>{index === 3 ? "vs. previous period" : "from mock data"}</span>
+      </div>
     </div>
   );
 }
 
 function StatusBadge({ status }) {
-  return <span className={`status ${status.toLowerCase()}`}>{status}</span>;
+  const normalized = String(status || "Unknown").toLowerCase();
+  return <span className={`status ${normalized}`}>{status || "Unknown"}</span>;
 }
 
 function Customers() {
@@ -256,20 +382,27 @@ function Customers() {
   const [success, setSuccess] = useState("");
 
   const filteredCustomers = customerList.filter((customer) => {
-    const searchText = search.toLowerCase();
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchText) ||
-      customer.email.toLowerCase().includes(searchText) ||
-      customer.phone.includes(searchText);
-    const matchesStatus = status === "All" || customer.status === status;
-    return matchesSearch && matchesStatus;
+    const searchText = search.trim().toLowerCase();
+    const name = String(customer?.name || "");
+    const email = String(customer?.email || "");
+    const phone = String(customer?.phone || "");
+
+    return (
+      (name.toLowerCase().includes(searchText) ||
+        email.toLowerCase().includes(searchText) ||
+        phone.includes(searchText)) &&
+      (status === "All" || customer?.status === status)
+    );
   });
 
   const addCustomer = (newCustomer) => {
-    setCustomerList((list) => [...list, { ...newCustomer, id: Date.now() }]);
+    setCustomerList((list) => [
+      ...list,
+      { ...newCustomer, id: Date.now() }
+    ]);
     setShowAdd(false);
     setSuccess("Customer added successfully.");
-    setTimeout(() => setSuccess(""), 2500);
+    window.setTimeout(() => setSuccess(""), 3000);
   };
 
   return (
@@ -277,25 +410,44 @@ function Customers() {
       <section className="panel">
         <div className="customer-toolbar">
           <div>
-            <h3>Customer List</h3>
-            <p>Search and manage your customers</p>
+            <p className="eyebrow">DIRECTORY</p>
+            <div className="section-title-row">
+              <h3>Customer list</h3>
+              <span className="count-pill">{filteredCustomers.length} shown</span>
+            </div>
+            <p>Search, filter and manage customer information.</p>
           </div>
-          <button className="primary-btn" onClick={() => setShowAdd(true)}>
-            + Add Customer
+          <button className="primary-btn add-btn" onClick={() => setShowAdd(true)}>
+            <span>+</span> Add customer
           </button>
         </div>
 
-        {success && <div className="success">{success}</div>}
+        {success && (
+          <div className="success" role="status">
+            <span className="success-icon">✓</span>
+            <span>{success}</span>
+            <button onClick={() => setSuccess("")} aria-label="Dismiss notification">×</button>
+          </div>
+        )}
 
         <div className="filters">
-          <input
-            className="search"
-            type="text"
-            placeholder="Search by name, email or phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <div className="search-wrap">
+            <span className="search-icon" aria-hidden="true">⌕</span>
+            <input
+              className="search"
+              type="search"
+              aria-label="Search customers"
+              placeholder="Search by name, email or phone..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            {search && (
+              <button className="clear-search" onClick={() => setSearch("")} aria-label="Clear customer search">
+                ×
+              </button>
+            )}
+          </div>
+          <select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter customers by status">
             <option>All</option>
             <option>Active</option>
             <option>Inactive</option>
@@ -303,10 +455,10 @@ function Customers() {
         </div>
 
         <div className="table-wrap">
-          <table>
+          <table className="customer-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th>Customer</th>
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Status</th>
@@ -316,13 +468,25 @@ function Customers() {
             <tbody>
               {filteredCustomers.map((customer) => (
                 <tr key={customer.id}>
-                  <td>{customer.name}</td>
-                  <td>{customer.email}</td>
-                  <td>{customer.phone}</td>
-                  <td><StatusBadge status={customer.status} /></td>
                   <td>
-                    <button className="view-btn" onClick={() => setSelectedCustomer(customer)}>
-                      View
+                    <div className="table-person">
+                      <div className="mini-avatar">{getInitials(customer.name)}</div>
+                      <strong className="truncate" title={customer.name || "Unnamed customer"}>
+                        {customer.name || "Unnamed customer"}
+                      </strong>
+                    </div>
+                  </td>
+                  <td className="truncate" title={customer.email || "Not provided"}>
+                    {customer.email || "Not provided"}
+                  </td>
+                  <td>{customer.phone || "Not provided"}</td>
+                  <td><StatusBadge status={customer.status || "Inactive"} /></td>
+                  <td>
+                    <button
+                      className="view-btn"
+                      onClick={() => setSelectedCustomer(customer)}
+                    >
+                      View details <span aria-hidden="true">→</span>
                     </button>
                   </td>
                 </tr>
@@ -331,10 +495,15 @@ function Customers() {
           </table>
 
           {filteredCustomers.length === 0 && (
-            <div className="empty">
-              <strong>No customers found</strong>
-              <span>Try another search or status.</span>
-            </div>
+            <EmptyState
+              title="No customers found"
+              message="Try another search or status filter."
+              actionLabel="Clear filters"
+              onAction={() => {
+                setSearch("");
+                setStatus("All");
+              }}
+            />
           )}
         </div>
       </section>
@@ -347,107 +516,243 @@ function Customers() {
       )}
 
       {showAdd && (
-        <AddCustomerModal onClose={() => setShowAdd(false)} onAdd={addCustomer} />
+        <AddCustomerModal
+          existingCustomers={customerList}
+          onClose={() => setShowAdd(false)}
+          onAdd={addCustomer}
+        />
       )}
     </main>
   );
 }
 
 function CustomerModal({ customer, onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop" onMouseDown={onClose}>
+      <div
+        className="modal detail-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customer-details-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <div className="modal-header">
-          <h3>Customer Details</h3>
-          <button className="close" onClick={onClose}>×</button>
+          <div>
+            <p className="eyebrow">CUSTOMER PROFILE</p>
+            <h3 id="customer-details-title">Customer details</h3>
+          </div>
+          <button className="close" onClick={onClose} aria-label="Close customer details">×</button>
         </div>
+
+        <div className="profile-header">
+          <div className="profile-avatar">{getInitials(customer.name)}</div>
+          <div>
+            <h4>{customer.name || "Unnamed customer"}</h4>
+            <StatusBadge status={customer.status || "Inactive"} />
+          </div>
+        </div>
+
         <div className="details">
-          <p><strong>Name:</strong> {customer.name}</p>
-          <p><strong>Email:</strong> {customer.email}</p>
-          <p><strong>Phone:</strong> {customer.phone}</p>
-          <p><strong>Status:</strong> <StatusBadge status={customer.status} /></p>
+          <DetailRow label="Email" value={customer.email || "Not provided"} />
+          <DetailRow label="Phone" value={customer.phone || "Not provided"} />
+          <DetailRow label="Customer ID" value={`#${customer.id || "—"}`} />
         </div>
-        <button className="primary-btn" onClick={onClose}>Close</button>
+
+        <button className="secondary-btn full" onClick={onClose}>Close details</button>
       </div>
     </div>
   );
 }
 
-function AddCustomerModal({ onClose, onAdd }) {
+function DetailRow({ label, value }) {
+  return (
+    <div className="detail-row">
+      <span>{label}</span>
+      <strong title={value}>{value}</strong>
+    </div>
+  );
+}
+
+function AddCustomerModal({ existingCustomers, onClose, onAdd }) {
   const [form, setForm] = useState({
-    name: "", email: "", phone: "", status: "Active"
+    name: "",
+    email: "",
+    phone: "",
+    status: "Active"
   });
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !submitting) onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, submitting]);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
     setError("");
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (submitting) return;
 
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
-      setError("Please fill all fields.");
+    const name = form.name.trim();
+    const email = form.email.trim().toLowerCase();
+    const phone = form.phone.trim();
+
+    if (!name || !email || !phone) {
+      setError("Please complete all required fields.");
       return;
     }
-    if (!emailPattern.test(form.email)) {
+
+    if (!emailPattern.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
-    if (!/^\d{10}$/.test(form.phone)) {
-      setError("Phone number should contain 10 digits.");
+
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Phone number should contain exactly 10 digits.");
       return;
     }
 
-    onAdd(form);
+    const duplicate = existingCustomers.some(
+      (customer) => String(customer?.email || "").toLowerCase() === email
+    );
+
+    if (duplicate) {
+      setError("A customer with this email already exists.");
+      return;
+    }
+
+    setSubmitting(true);
+    window.setTimeout(() => {
+      onAdd({ name, email, phone, status: form.status });
+    }, 250);
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <form className="modal" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop" onMouseDown={() => !submitting && onClose()}>
+      <form
+        className="modal"
+        onSubmit={handleSubmit}
+        onMouseDown={(event) => event.stopPropagation()}
+        noValidate
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-customer-title"
+      >
         <div className="modal-header">
-          <h3>Add Customer</h3>
-          <button type="button" className="close" onClick={onClose}>×</button>
+          <div>
+            <p className="eyebrow">NEW RECORD</p>
+            <h3 id="add-customer-title">Add customer</h3>
+          </div>
+          <button
+            type="button"
+            className="close"
+            onClick={onClose}
+            disabled={submitting}
+            aria-label="Close add customer form"
+          >
+            ×
+          </button>
         </div>
 
-        <label>Name</label>
+        <p className="modal-intro">Add a customer to the local demo directory.</p>
+
+        <label htmlFor="customer-name">Name <span>*</span></label>
         <input
+          id="customer-name"
           value={form.name}
-          onChange={(e) => updateField("name", e.target.value)}
+          maxLength={80}
+          onChange={(event) => updateField("name", event.target.value)}
           placeholder="Customer name"
+          autoFocus
+          required
         />
 
-        <label>Email</label>
+        <label htmlFor="customer-email">Email <span>*</span></label>
         <input
+          id="customer-email"
+          type="email"
           value={form.email}
-          onChange={(e) => updateField("email", e.target.value)}
+          maxLength={120}
+          onChange={(event) => updateField("email", event.target.value)}
           placeholder="customer@email.com"
+          required
         />
 
-        <label>Phone</label>
+        <label htmlFor="customer-phone">Phone <span>*</span></label>
         <input
+          id="customer-phone"
+          inputMode="numeric"
           value={form.phone}
-          onChange={(e) => updateField("phone", e.target.value)}
+          maxLength={10}
+          onChange={(event) => updateField("phone", event.target.value.replace(/\D/g, ""))}
           placeholder="10 digit phone number"
+          required
         />
 
-        <label>Status</label>
+        <label htmlFor="customer-status">Status</label>
         <select
+          id="customer-status"
           value={form.status}
-          onChange={(e) => updateField("status", e.target.value)}
+          onChange={(event) => updateField("status", event.target.value)}
         >
           <option>Active</option>
           <option>Inactive</option>
         </select>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
-        <button className="primary-btn" type="submit">Add Customer</button>
+        <div className="modal-actions">
+          <button
+            className="secondary-btn"
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button className="primary-btn" type="submit" disabled={submitting}>
+            {submitting ? <><span className="button-spinner" /> Adding...</> : "Add customer"}
+          </button>
+        </div>
       </form>
     </div>
   );
+}
+
+function EmptyState({ title, message, actionLabel, onAction }) {
+  return (
+    <div className="empty">
+      <div className="empty-icon" aria-hidden="true">⌕</div>
+      <strong>{title}</strong>
+      <span>{message}</span>
+      {onAction && (
+        <button className="text-btn" onClick={onAction}>{actionLabel}</button>
+      )}
+    </div>
+  );
+}
+
+function getInitials(name = "") {
+  const words = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "?";
+  return words.slice(0, 2).map((word) => word[0]).join("").toUpperCase();
 }
 
 createRoot(document.getElementById("root")).render(
